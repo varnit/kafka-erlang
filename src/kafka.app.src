@@ -1,0 +1,12 @@
+{application, kafka,
+ [
+  {description, ""},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { kafka_app, []}},
+  {env, []}
+ ]}.
