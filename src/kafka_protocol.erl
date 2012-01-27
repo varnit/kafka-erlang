@@ -1,7 +1,7 @@
--module(kafka_parser).
+-module(kafka_protocol).
 -author('Knut Nesheim <knutin@gmail.com>').
 
--compile([export_all]).
+-export([fetch_request/3, parse_messages/1]).
 
 -define(FETCH, 1).
 

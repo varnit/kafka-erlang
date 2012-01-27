@@ -42,7 +42,7 @@ init([Topic, Offset]) ->
                }}.
 
 handle_call(fetch, _From, #state{current_offset = Offset, topic = T} = State) ->
-    Req = kafka_parser:fetch_request(T, Offset, 1048576),
+    Req = kafka_protocol:fetch_request(T, Offset, 1048576),
     ok = gen_tcp:send(State#state.socket, Req),
 
     case gen_tcp:recv(State#state.socket, 6) of
@@ -50,7 +50,7 @@ handle_call(fetch, _From, #state{current_offset = Offset, topic = T} = State) ->
             {reply, {ok, []}, State};
         {ok, <<L:32/integer, 0:16/integer>>} ->
             {ok, Data} = gen_tcp:recv(State#state.socket, L-2),
-            Messages = kafka_parser:parse_messages(Data),
+            Messages = kafka_protocol:parse_messages(Data),
             {reply, {ok, Messages}, State#state{current_offset = Offset + L-2}};
         {ok, B} ->
             {reply, {error, B}, State}

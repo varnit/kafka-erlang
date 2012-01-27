@@ -1,4 +1,4 @@
--module(kafka_parser_tests).
+-module(kafka_protocol_tests).
 -include_lib("eunit/include/eunit.hrl").
 
 parse_messages_test() ->
@@ -7,7 +7,7 @@ parse_messages_test() ->
         97,110,115,111,101,32,117,104,97,110,115,111,101,116,117,32,104,97,111,
         110,115,101,117,104,116,32,97,111,110,115,101,117,104,116,32,97,111,
         115,101,110,117,116>>,
-    M = kafka_parser:parse_messages(B),
+    M = kafka_protocol:parse_messages(B),
     ?assertEqual([<<"saoetuhasnoethu">>,
                   <<"asoneuhansoe uhansoetu haonseuht aonseuht aosenut">>], M).
 
