@@ -50,8 +50,8 @@ handle_call(fetch, _From, #state{current_offset = Offset, topic = T} = State) ->
             {reply, {ok, []}, State};
         {ok, <<L:32/integer, 0:16/integer>>} ->
             {ok, Data} = gen_tcp:recv(State#state.socket, L-2),
-            Messages = kafka_protocol:parse_messages(Data),
-            {reply, {ok, Messages}, State#state{current_offset = Offset + L-2}};
+            {Messages, Size} = kafka_protocol:parse_messages(Data),
+            {reply, {ok, Messages}, State#state{current_offset = Offset + Size - 2}};
         {ok, B} ->
             {reply, {error, B}, State}
     end;
