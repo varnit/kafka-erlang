@@ -16,9 +16,20 @@ fetch_request(Topic, Offset, MaxSize) ->
       TopicSize:16/integer,
       Topic/binary,
       0:32/integer,
-      0:64/integer,
-      1048576:32/integer>>.
+      Offset:64/integer,
+      MaxSize:32/integer>>.
 
-parse_response(B) ->
-    %%<<L:32/integer, 0:8/integer, Check:32/integer, Msg:(L - 1 - 4)/binary, Rest/bitstring>> = B.
-    ok.
+
+
+parse_messages(Bs) ->
+    parse_messages(Bs, []).
+
+parse_messages(<<>>, Acc) ->
+    lists:reverse(Acc);
+parse_messages(<<L:32/integer, _/binary>> = B, Acc) when size(B) >= L - 1 - 4->
+    Length = L - 1 - 4,
+    <<_:32/integer, 0:8/integer, _Check:32/integer,
+      Msg:Length/binary,
+      Rest/bitstring>> = B,
+    parse_messages(Rest, [Msg | Acc]).
+
