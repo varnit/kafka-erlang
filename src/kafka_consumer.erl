@@ -5,7 +5,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/4, get_current_offset/1]).
+-export([start_link/4, get_current_offset/1, fetch/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -28,6 +28,9 @@ start_link(Host, Port, Topic, Offset) ->
 
 get_current_offset(C) ->
     gen_server:call(C, get_current_offset).
+
+fetch(C) ->
+    gen_server:call(C, fetch).
 
 %%%===================================================================
 %%% gen_server callbacks
