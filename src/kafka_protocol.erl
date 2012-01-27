@@ -31,11 +31,11 @@ parse_messages(<<>>, Acc, Size) ->
     {lists:reverse(Acc), Size};
 
 parse_messages(<<L:32/integer, _/binary>> = B, Acc, Size) when size(B) >= L - 1 - 4->
-    Length = L - 4 - 1,
+    MsgLength = L - 4 - 1,
     <<_:32/integer, 0:8/integer, _Check:32/integer,
-      Msg:Length/binary,
+      Msg:MsgLength/binary,
       Rest/bitstring>> = B,
-    parse_messages(Rest, [Msg | Acc], Size + Length + 4 + 1 + 4);
+    parse_messages(Rest, [Msg | Acc], Size + L + 4);
 
 parse_messages(_B, Acc, Size) ->
     {lists:reverse(Acc), Size}.
