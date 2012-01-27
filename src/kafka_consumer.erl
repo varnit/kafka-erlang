@@ -15,6 +15,7 @@
 -record(state, {socket,
                 start_offset,
                 current_offset,
+                max_size = 1048576,
                 topic
 }).
 
@@ -42,7 +43,7 @@ init([Host, Port, Topic, Offset]) ->
                }}.
 
 handle_call(fetch, _From, #state{current_offset = Offset, topic = T} = State) ->
-    Req = kafka_protocol:fetch_request(T, Offset, 20),
+    Req = kafka_protocol:fetch_request(T, Offset, State#state.max_size),
     ok = gen_tcp:send(State#state.socket, Req),
 
     case gen_tcp:recv(State#state.socket, 6) of
