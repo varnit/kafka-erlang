@@ -5,7 +5,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/4, get_current_offset/1, fetch/1]).
+-export([start_link/5, get_current_offset/1, fetch/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -15,6 +15,7 @@
 -record(state, {socket,
                 start_offset,
                 current_offset,
+                offset_cb,
                 max_size = 1048576,
                 topic
 }).
@@ -23,8 +24,8 @@
 %%% API
 %%%===================================================================
 
-start_link(Host, Port, Topic, Offset) ->
-    gen_server:start_link(?MODULE, [Host, Port, Topic, Offset], []).
+start_link(Host, Port, Topic, Offset, OffsetCb) ->
+    gen_server:start_link(?MODULE, [Host, Port, Topic, Offset, OffsetCb], []).
 
 get_current_offset(C) ->
     gen_server:call(C, get_current_offset).
@@ -36,13 +37,14 @@ fetch(C) ->
 %%% gen_server callbacks
 %%%===================================================================
 
-init([Host, Port, Topic, Offset]) ->
+init([Host, Port, Topic, Offset, OffsetCb]) ->
     {ok, Socket} = gen_tcp:connect(Host, Port,
                                    [binary, {active, false}, {packet, raw}]),
     {ok, #state{socket = Socket,
                 topic = Topic,
                 start_offset = Offset,
-                current_offset = Offset
+                current_offset = Offset,
+                offset_cb = OffsetCb
                }}.
 
 handle_call(fetch, _From, #state{current_offset = Offset, topic = T} = State) ->
@@ -55,6 +57,7 @@ handle_call(fetch, _From, #state{current_offset = Offset, topic = T} = State) ->
         {ok, <<L:32/integer, 0:16/integer>>} ->
             {ok, Data} = gen_tcp:recv(State#state.socket, L-2),
             {Messages, Size} = kafka_protocol:parse_messages(Data),
+            (State#state.offset_cb)(T, Offset, Offset + Size),
             {reply, {ok, Messages}, State#state{current_offset = Offset + Size}};
         {ok, B} ->
             {reply, {error, B}, State}
