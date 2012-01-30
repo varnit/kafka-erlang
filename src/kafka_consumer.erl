@@ -5,7 +5,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/5, get_current_offset/1, fetch/1]).
+-export([start_link/5, get_current_offset/1, get_offsets/3, fetch/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -30,6 +30,9 @@ start_link(Host, Port, Topic, Offset, OffsetCb) ->
 get_current_offset(C) ->
     gen_server:call(C, get_current_offset).
 
+get_offsets(C, Time, MaxNumber) ->
+    gen_server:call(C, {get_offsets, Time, MaxNumber}).
+
 fetch(C) ->
     gen_server:call(C, fetch).
 
@@ -47,8 +50,8 @@ init([Host, Port, Topic, Offset, OffsetCb]) ->
                 offset_cb = OffsetCb
                }}.
 
-handle_call(fetch, _From, #state{current_offset = Offset, topic = T} = State) ->
-    Req = kafka_protocol:fetch_request(T, Offset, State#state.max_size),
+handle_call(fetch, _From, #state{current_offset = Offset} = State) ->
+    Req = kafka_protocol:fetch_request(State#state.topic, Offset, State#state.max_size),
     ok = gen_tcp:send(State#state.socket, Req),
 
     case gen_tcp:recv(State#state.socket, 6) of
@@ -57,8 +60,20 @@ handle_call(fetch, _From, #state{current_offset = Offset, topic = T} = State) ->
         {ok, <<L:32/integer, 0:16/integer>>} ->
             {ok, Data} = gen_tcp:recv(State#state.socket, L-2),
             {Messages, Size} = kafka_protocol:parse_messages(Data),
-            (State#state.offset_cb)(T, Offset, Offset + Size),
+            (State#state.offset_cb)(State#state.topic, Offset, Offset + Size),
             {reply, {ok, Messages}, State#state{current_offset = Offset + Size}};
+        {ok, B} ->
+            {reply, {error, B}, State}
+    end;
+
+handle_call({get_offsets, Time, MaxNumber}, _From, State) ->
+    Req = kafka_protocol:offset_request(State#state.topic, Time, MaxNumber),
+    ok = gen_tcp:send(State#state.socket, Req),
+
+    case gen_tcp:recv(State#state.socket, 6) of
+        {ok, <<L:32/integer, 0:16/integer>>} ->
+            {ok, Data} = gen_tcp:recv(State#state.socket, L-2),
+            {reply, {ok, kafka_protocol:parse_offsets(Data)}, State};
         {ok, B} ->
             {reply, {error, B}, State}
     end;
