@@ -5,7 +5,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/5, get_current_offset/1, get_offsets/3, fetch/1]).
+-export([start_link/5, get_current_offset/1, get_offsets/3, fetch/1, set_offset/2]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -32,6 +32,9 @@ get_current_offset(C) ->
 
 get_offsets(C, Time, MaxNumber) ->
     gen_server:call(C, {get_offsets, Time, MaxNumber}).
+
+set_offset(C, Offset) ->
+    gen_server:call(C, {set_offset, Offset}).
 
 fetch(C) ->
     gen_server:call(C, fetch).
@@ -79,7 +82,10 @@ handle_call({get_offsets, Time, MaxNumber}, _From, State) ->
     end;
 
 handle_call(get_current_offset, _From, State) ->
-    {reply, {ok, State#state.current_offset}, State}.
+    {reply, {ok, State#state.current_offset}, State};
+handle_call({set_offset, Offset}, _From, State) ->
+    {reply, ok, State#state{current_offset = Offset}}.
+
 
 
 handle_cast(_Msg, State) ->
