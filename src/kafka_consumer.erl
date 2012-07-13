@@ -55,16 +55,20 @@ init([Host, Port, Topic, Offset, OffsetCb]) ->
 
 handle_call(fetch, _From, #state{current_offset = Offset} = State) ->
     Req = kafka_protocol:fetch_request(State#state.topic, Offset, State#state.max_size),
+    io:format("fetch Req: ~p~n", [Req]),
     ok = gen_tcp:send(State#state.socket, Req),
 
     case gen_tcp:recv(State#state.socket, 6) of
         {ok, <<2:32/integer, 0:16/integer>>} ->
             {reply, {ok, []}, State};
+
         {ok, <<L:32/integer, 0:16/integer>>} ->
             {ok, Data} = gen_tcp:recv(State#state.socket, L-2),
             {Messages, Size} = kafka_protocol:parse_messages(Data),
+            io:format("messages: ~p~nsize: ~p~n", [Messages, length(Messages)]),
             (State#state.offset_cb)(State#state.topic, Offset, Offset + Size),
             {reply, {ok, Messages}, State#state{current_offset = Offset + Size}};
+
         {ok, B} ->
             {reply, {error, B}, State}
     end;
@@ -77,20 +81,19 @@ handle_call({get_offsets, Time, MaxNumber}, _From, State) ->
         {ok, <<L:32/integer, 0:16/integer>>} ->
             {ok, Data} = gen_tcp:recv(State#state.socket, L-2),
             {reply, {ok, kafka_protocol:parse_offsets(Data)}, State};
+
         {ok, B} ->
             {reply, {error, B}, State}
     end;
 
 handle_call(get_current_offset, _From, State) ->
     {reply, {ok, State#state.current_offset}, State};
+
 handle_call({set_offset, Offset}, _From, State) ->
     {reply, ok, State#state{current_offset = Offset}}.
 
-
-
 handle_cast(_Msg, State) ->
     {noreply, State}.
-
 
 handle_info(Info, State) ->
     io:format("info: ~p~n", [Info]),
@@ -99,11 +102,9 @@ handle_info(Info, State) ->
 terminate(_Reason, _State) ->
     ok.
 
-
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
-

@@ -7,7 +7,10 @@
 -export([fetch_request/3, offset_request/3]).
 -export([parse_messages/1, parse_offsets/1]).
 
+-define(PRODUCE, 0).
 -define(FETCH, 1).
+-define(MULTIFETCH, 2).
+-define(MULTIPRODUCE, 3).
 -define(OFFSETS, 4).
 
 
@@ -43,10 +46,21 @@ parse_messages(<<>>, Acc, Size) ->
     {lists:reverse(Acc), Size};
 
 parse_messages(<<L:32/integer, _/binary>> = B, Acc, Size) when size(B) >= L + 4->
-    MsgLength = L - 4 - 1,
-    <<_:32/integer, 0:8/integer, _Check:32/integer,
+    io:format("B size: ~p~nL:~p~n", [size(B), L]),
+    UnB = zlib:gunzip(B),
+    io:format("B: ~p~nUnB: ~p~n", [B, UnB]),
+    MsgLength = L - 1 - 1 - 4,
+    <<_:32/integer, Magic:8/integer, Compression:8/integer, Check:32/integer,
       Msg:MsgLength/binary,
-      Rest/bitstring>> = B,
+      Rest/bitstring>> = UnB,
+    io:format("
+              Magic: ~p~n
+              Compression: ~p~n
+              Check: ~p~n
+              Computed Check: ~p~n
+              Msg: ~p~n
+              gunzip Msg: ~p~n
+    ", [Magic, Compression, Check, erlang:crc32(Msg), Msg, zlib:gunzip(Msg)]),
     parse_messages(Rest, [Msg | Acc], Size + L + 4);
 
 parse_messages(_B, Acc, Size) ->
